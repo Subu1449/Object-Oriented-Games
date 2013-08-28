@@ -1,0 +1,211 @@
+'''Pop-A-Shot Basketball by Subhadra Upadhyay. The project was completed following RaspberryPiTutorials on Youtube
+for beginners and introduction into object oriented game developing. This is a slight modification of the original 
+game which was only a base design...'''
+
+'''Here the pygame module must be imported. This was programmed with Python 2.7.5'''
+import pygame, sys, random, os
+
+'''Here some variables are introduced'''
+from pygame.locals import *
+
+'''Classes and functions below!-->'''
+
+def initPyGame():
+	
+	
+	pygame.init()
+	
+	'''
+	This centres the game. SDL_VIDEO_WINDOW_POSSDL is  
+	used because pygame uses (standard direct media layer)
+	for it's graphics, and other functions
+	'''
+	os.environ['SDL_VIDEO_WINDOW_POS'] = 'center'
+
+	'''window title'''
+	pygame.display.set_caption("Pi Shooter")
+	
+	'''The cursor is hid here so the radar looks good'''
+	pygame.mouse.set_visible(False)
+
+class backgroundClass():
+	
+	'''Class containing properties and methods for our background'''
+	def __init__(self):
+		'''This is the variable for the hardwood in the background'''
+		backgroundfile = "background.png"
+		
+		'''Create a pygame surface called image with our background image'''
+		self.image = pygame.image.load(backgroundfile).convert()
+		
+	def draw(self):
+		'''Code to draw the background to screen surface'''
+		screen.blit(self.image, (0,0))
+
+class crosshairsClass(pygame.sprite.Sprite):
+	
+	
+	   
+	def __init__(self):
+	   '''A parameter is finally set.'''
+	   pygame.sprite.Sprite.__init__(self)
+	   
+	   '''Variable to store what our image is called'''
+	   crosshairsfile = "crosshairsmouse.png"
+	   
+	   '''get our image from crosshairs file and rectangle from our image'''
+	   self.image = pygame.image.load(crosshairsfile).convert_alpha()
+	   self.rect = self.image.get_rect()
+	   
+	def update(self):
+		'''move the crosshairs to where the mouse is'''
+		
+		'''get the mouse position'''
+		position = pygame.mouse.get_pos()
+		
+		'''assign it to the centre of our rectangle'''
+		self.rect.center = position
+		
+class piClass(pygame.sprite.Sprite):
+
+	'''This class inherits functions from pygame.sprite.Sprite
+	   containing methods and properties for our pi'''
+	   
+	def __init__(self, starty, speed):
+	   '''Initialize a sprite, passing this instance as a parameter'''
+	   pygame.sprite.Sprite.__init__(self)
+	   
+	   '''This included the basketball image! It is what goes from side to side'''
+	   pifile = "pi.png"
+	   
+	   '''get our image from pi file and rectangle from our image'''
+	   self.image = pygame.image.load(pifile).convert_alpha()
+	   self.rect = self.image.get_rect()
+	   
+	   '''set right of rectangle to our start x and y co ordinates'''
+	   self.rect.right = 0
+	   self.rect.centery = starty
+	   
+	   '''How many pixels to move the pi image across the screen'''
+	   self.pispeed = speed
+	   
+	def update(self):
+		'''Add pispeed to current rectangle x value so it moves horizontaly across the screen'''
+		self.rect.right += self.pispeed
+		
+		'''Get the rectangle for the screen'''
+		screenrect = screen.get_rect()
+		
+		'''If the left edge of our pi is >= edge of our screen then...'''
+		if self.rect.left >= screenrect.right:
+			'''set our rectangle right x value back to zero'''
+			self.rect.right = 0
+			
+			'''get a y value from our function, passing through screenrect
+			so the function can work our the correct ranges. Then assign it
+			to the y co ordinate top of our pi rectangle'''
+			self.rect.top = self.randomYValue(screenrect)
+			
+	def randomYValue(self, screenrect):
+		'''generate a random y value for the pi so that 
+		it appears on a different 'row' of the screen'''
+		
+		'''work out the correct ranges so the whole logo is visible'''
+		startrange = self.rect.height
+		endrange = screenrect.height - self.rect.height
+		
+		randomY = random.randrange(startrange, endrange)
+		
+		'''returns a y co ordinate suitable for use at the top of the rectangle'''
+		return randomY
+		
+class scoreClass:
+	'''Class to hold the score and update the score to the screen'''
+	def __init__(self):
+		self.value = 0
+		'''set a font, default font size 36'''
+		self.font = pygame.font.Font(None, 36)
+		
+	def update(self):
+		'''Font.renderer(text, fontSmoothing, colour(r, g, b))'''
+		text = self.font.render("Score: %s" % self.value, True, (0, 0, 0))
+		textRect = text.get_rect()
+		screenrect = screen.get_rect()
+		textRect.centerx = screenrect.width - textRect.width
+		screen.blit(text, textRect)
+		
+		
+
+def eventHandling():
+	'''The code below handles our event'''
+	for event in pygame.event.get():
+		
+		'''Close the program when the X button is pressed'''
+		if event.type == QUIT:
+			pygame.quit()
+			sys.exit()
+			
+		if event.type == MOUSEBUTTONDOWN:
+			'''The mouse has been clicked so see if the sprites rectangles collide
+			The pygame.sprite.collide_rect returns either True or False.
+			Note that in our case the collision detection isn't very accurate
+			because there will be a collision even if the edge of the crosshairs
+			is over the edge of the pi. This can be improved by testing collision 
+			on specific pixels which I will do next week'''
+			
+			hit = pi.rect.collidepoint(crosshairs.rect.centerx, crosshairs.rect.centery)
+			
+			if hit == True:
+				'''The crosshairs was over the pi sprite when mouse was clicked'''
+				score.value += 1
+
+'''Initialize pygame and set some environment variables'''
+initPyGame()
+
+'''Initialize a display with width 370 and height 542 with 32 bit colour'''
+screen = pygame.display.set_mode((370, 542), 0, 32)
+
+'''Used to manage how fast the screen updates'''
+clock = pygame.time.Clock()
+
+'''variable for how many loops a second'''
+framesPerSecond = 20
+
+'''Declare a global variable called score to hold the score'''
+score = scoreClass()
+
+'''Declare class instances to be used in game loop'''
+background = backgroundClass()
+crosshairs = crosshairsClass()
+
+'''Initialize an instance of pi class with start y = 70
+and speed of 10'''
+pi = piClass(70, 10)
+
+'''create a sprite Group which will contain all our sprites
+This sprite group can draw all the sprites it contains to the screen.
+It is called RenderPlain because there are actually more advanced Render groups.
+But for our game, we just need simple drawing.'''
+allsprites = pygame.sprite.RenderPlain((crosshairs, pi))
+
+
+while True:
+	'''This is where the game officially starts!'''
+	
+	'''Limit screen updates to 15 frames per second so we dont use 100% cpu time'''
+	clock.tick(framesPerSecond)
+	
+	'''This runs the code while it is being run'''
+	eventHandling()
+
+	'''This helps to draw backgrounds'''
+	background.draw()
+	
+	score.update()
+	
+	'''run the update code in our sprites and then draw them to the screen'''
+	allsprites.update()
+	allsprites.draw(screen)
+	
+	'''update the full display surface to the screen'''
+	pygame.display.update()
